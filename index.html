@@ -97,8 +97,28 @@
       position: fixed;
       inset: 0;
       bottom: 42px;
-      background: #008080 url('Assets/wallpaper.png') center/cover no-repeat;
+      background: #008080;
       display: none;
+    }
+    #desktop::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: none;
+      opacity: 0.12;
+      pointer-events: none;
+    }
+
+    #desk-rosette {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 25vh;
+      height: 25vh;
+      background: url('Assets/1F3F5.svg') center/contain no-repeat;
+      opacity: 0.22;
+      pointer-events: none;
     }
 
     /* ================================================================
@@ -208,7 +228,73 @@
       flex: 1;
       overflow: auto;
       padding: 10px;
+      background-color: #c0c0c0;
+      background-image: radial-gradient(rgba(0,0,128,0.055) 1px, transparent 1px);
+      background-size: 8px 8px;
     }
+
+    /* Barre de statut Win95 */
+    .win-statusbar {
+      display: flex;
+      flex-shrink: 0;
+      border-top: 2px solid #808080;
+      padding: 2px 4px;
+      gap: 4px;
+      font-size: 11px;
+      background: #c0c0c0;
+    }
+    .win-statusbar-pane {
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      padding: 2px 8px;
+    }
+    .win-statusbar-pane.grow { flex: 1; }
+
+    /* Mission rows */
+    .mission-row {
+      padding: 7px 10px;
+      background: #fff;
+      border: 1px solid #808080;
+      border-left: 4px solid #000080;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    /* Setup rows */
+    .setup-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 10px;
+      background: #fff;
+      border: 1px inset #808080;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+    .setup-row-ico { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+    .setup-row-label { font-weight: bold; color: #000080; min-width: 100px; }
+    .setup-row-val { color: #333; }
+
+    /* Formation rows */
+    .formation-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #fff;
+      border: 1px solid #808080;
+      border-left: 4px solid #000080;
+      margin-bottom: 6px;
+    }
+    .formation-year {
+      font-weight: bold;
+      color: #000080;
+      font-size: 12px;
+      min-width: 36px;
+    }
+    .formation-info { font-size: 13px; line-height: 1.5; }
 
     /* ================================================================
        BARRE DES TÂCHES
@@ -596,6 +682,22 @@
     .dlg-btns { padding: 0 22px 18px; display: flex; justify-content: center; gap: 10px; }
 
     /* ================================================================
+       EASTER EGG
+       ================================================================ */
+    #easter-egg {
+      position: fixed;
+      bottom: 46px;
+      right: 6px;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.45);
+      text-decoration: none;
+      z-index: 8450;
+      display: none;
+    }
+
+    /* ================================================================
        À PROPOS
        ================================================================ */
     #about {
@@ -636,6 +738,8 @@
      BUREAU
      ================================================================ -->
 <div id="desktop">
+
+  <div id="desk-rosette"></div>
 
   <!-- Icônes colonne gauche -->
   <div class="ico" style="left:14px;top:14px;" tabindex="0"
@@ -782,6 +886,20 @@
         <div class="id-tagline">"Je transforme les idées en expériences visuelles qui marquent."</div>
       </div>
     </div>
+
+    <div style="margin-top:12px;">
+      <div class="sec-title">📋 Missions chez Grinto</div>
+      <div class="mission-row">🎨 &nbsp;Diriger la création de campagnes 360° — print, digital, motion</div>
+      <div class="mission-row">👥 &nbsp;Manager & faire monter en compétence l'équipe créative (3 personnes)</div>
+      <div class="mission-row">📸 &nbsp;Superviser la production photo/vidéo on-set et post-production</div>
+      <div class="mission-row">🏷 &nbsp;Définir & maintenir les guidelines visuels et la charte de marque</div>
+      <div class="mission-row">🔗 &nbsp;Être le pont créatif entre clients, direction et développeurs</div>
+    </div>
+  </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">Fiche de poste — Paul · DA Senior</div>
+    <div class="win-statusbar-pane">Grinto · 2031</div>
+    <div class="win-statusbar-pane">5 missions</div>
   </div>
 </div>
 
@@ -804,7 +922,7 @@
       <div class="sched-slot"><span class="sched-time">12:30</span><span class="sched-act">🍕 Lunch — miam miam</span></div>
       <div class="sched-slot"><span class="sched-time">14:00</span><span class="sched-act">📸 Travail de production</span></div>
       <div class="sched-slot"><span class="sched-time">16:30</span><span class="sched-act">🔍 Petit café pour finir la journée #potins</span></div>
-      <div class="sched-slot"><span class="sched-time">18:00</span><span class="sched-act">🚀 After work</span></div>
+      <div class="sched-slot"><span class="sched-time">18:00</span><span class="sched-act">🍻 After work</span></div>
     </div>
     <div class="vibe">
       <span class="vibe-tag">Présentiel</span>
@@ -814,6 +932,35 @@
       <span class="vibe-tag">Stabilité</span>
       <span class="vibe-tag">Grinto since 2024</span>
     </div>
+
+    <div style="margin-top:16px;">
+      <div class="sec-title">🖥 Mon setup créatif</div>
+      <div class="setup-row">
+        <span class="setup-row-ico">💻</span>
+        <span class="setup-row-label">Machine</span>
+        <span class="setup-row-val">MacBook Pro M3 · 36 Go — pour les renders qui font chauffer</span>
+      </div>
+      <div class="setup-row">
+        <span class="setup-row-ico">🖱</span>
+        <span class="setup-row-label">Logiciels</span>
+        <span class="setup-row-val">Figma · Suite Adobe · VS Code · DaVinci Resolve</span>
+      </div>
+      <div class="setup-row">
+        <span class="setup-row-ico">📷</span>
+        <span class="setup-row-label">Terrain</span>
+        <span class="setup-row-val">Fuji X-T3 + 23mm f/2 · Lumix S5 pour la vidéo</span>
+      </div>
+      <div class="setup-row">
+        <span class="setup-row-ico">🎧</span>
+        <span class="setup-row-label">Musique</span>
+        <span class="setup-row-val">Sony WH-1000XM5 — indispensable en open-space</span>
+      </div>
+    </div>
+  </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">Journée type — Grinto · Présentiel</div>
+    <div class="win-statusbar-pane">Lu–Ve · Paris</div>
+    <div class="win-statusbar-pane">6 événements</div>
   </div>
 </div>
 
@@ -884,6 +1031,11 @@
 
     </div>
   </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">C:\PaulOS\Portfolio\ — 5 objets sélectionnés</div>
+    <div class="win-statusbar-pane">2026–2031</div>
+    <div class="win-statusbar-pane">Grandes icônes</div>
+  </div>
 </div>
 
 <!-- W4 : Mes Compétences -->
@@ -950,8 +1102,28 @@
         <div class="cb-item"><div class="cb-box">✓</div> Vision stratégique</div>
         <div class="cb-item"><div class="cb-box">✓</div> Gestion de projet</div>
         <div class="cb-item"><div class="cb-box">✓</div> Pont créatif ↔ technique</div>
+
+        <br>
+        <div class="sec-title">🎓 Formation</div>
+        <div class="formation-row">
+          <span class="formation-year">2024</span>
+          <span class="formation-info"><strong>Bachelor DA & Communication Visuelle</strong><br>Major de promo · mention TB</span>
+        </div>
+        <div class="formation-row">
+          <span class="formation-year">2022</span>
+          <span class="formation-info"><strong>BTS Communication Visuelle</strong><br>Option Multimédia · alternance Grinto</span>
+        </div>
+        <div class="formation-row">
+          <span class="formation-year">+</span>
+          <span class="formation-info"><strong>Certifications</strong><br>Google UX Design · Meta Blueprint · Adobe Certified</span>
+        </div>
       </div>
     </div>
+  </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">Panneau de configuration — 6 compétences · 8 outils</div>
+    <div class="win-statusbar-pane">3 certifications</div>
+    <div class="win-statusbar-pane">Niveau : Senior</div>
   </div>
 </div>
 
@@ -1026,6 +1198,11 @@
     </div>
 
   </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">Journal des erreurs — 3 incidents répertoriés</div>
+    <div class="win-statusbar-pane">3 résolus</div>
+    <div class="win-statusbar-pane">0 critique</div>
+  </div>
 </div>
 
 
@@ -1053,6 +1230,11 @@
       </p>
     </div>
   </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">Paul_DA_Senior.exe — En cours d'exécution</div>
+    <div class="win-statusbar-pane">CPU : 100%</div>
+    <div class="win-statusbar-pane">RAM : 8 To</div>
+  </div>
 </div>
 
 <!-- W8 : Corbeille (déco) -->
@@ -1078,6 +1260,10 @@
       </p>
       <p style="margin-top:14px;font-size:11px;color:#666;">Corbeille vidée le 17/06/2031</p>
     </div>
+  </div>
+  <div class="win-statusbar">
+    <div class="win-statusbar-pane grow">Corbeille — 5 éléments supprimés définitivement</div>
+    <div class="win-statusbar-pane">0 octet utilisé</div>
   </div>
 </div>
 
@@ -1142,6 +1328,9 @@
     <button class="btn95" onclick="closeAbout()">OK</button>
   </div>
 </div>
+
+<!-- Easter egg -->
+<a href="https://paul2031.netlify.app/" target="_blank" id="easter-egg" title="paul2031.netlify.app">paul2031.netlify.app</a>
 
 <!-- ================================================================
      BARRE DES TÂCHES
@@ -1267,6 +1456,7 @@ function launchDesktop() {
     boot.style.display = 'none';
     document.getElementById('desktop').style.display = 'block';
     document.getElementById('taskbar').style.display = 'flex';
+    document.getElementById('easter-egg').style.display = 'block';
     startClock();
   }, 400);
 }

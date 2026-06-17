@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280">
+  <title>PaulOS 2031</title>
+  <style>
+    /* ================================================================
+       RESET & BASE
+       ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      font-family: Tahoma, 'MS Sans Serif', Arial, system-ui, sans-serif;
+      font-size: 12px;
+      background: #000;
+      user-select: none;
+      cursor: default;
+    }
+
+    /* ================================================================
+       BOOT SCREEN
+       ================================================================ */
+    #boot {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: #c0c0c0;
+    }
+
+    #boot-logo {
+      font-size: 64px;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 6px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    #boot-subtitle {
+      font-size: 18px;
+      color: #1084d0;
+      letter-spacing: 3px;
+      margin-bottom: 48px;
+    }
+
+    #boot-progress-label {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 10px;
+      min-height: 18px;
+    }
+
+    #boot-bar-wrap {
+      width: 360px;
+      height: 22px;
+      border: 2px solid #333;
+      background: #0a0a0a;
+      margin-bottom: 20px;
+    }
+
+    #boot-bar {
+      height: 100%;
+      background: linear-gradient(to right, #000080, #1084d0);
+      width: 0%;
+      transition: width 0.15s ease;
+    }
+
+    #boot-build {
+      font-size: 11px;
+      color: #333;
+      letter-spacing: 1px;
+    }
+
+    #boot-skip {
+      margin-top: 32px;
+      font-size: 12px;
+      color: #444;
+      cursor: pointer;
+      border: 1px solid #333;
+      padding: 4px 12px;
+    }
+    #boot-skip:hover { color: #888; border-color: #666; }
+
+    /* ================================================================
+       DESKTOP
+       ================================================================ */
+    #desktop {
+      position: fixed;
+      inset: 0;
+      bottom: 42px;
+      background: #008080 url('Assets/wallpaper.png') center/cover no-repeat;
+      display: none;
+    }
+
+    /* ================================================================
+       ICÔNES BUREAU
+       ================================================================ */
+    .ico {
+      position: absolute;
+      width: 76px;
+      text-align: center;
+      cursor: pointer;
+      padding: 4px;
+      border: 2px solid transparent;
+    }
+    .ico:hover { border: 2px dashed rgba(255,255,255,0.4); background: rgba(0,0,128,0.25); }
+    .ico:focus { outline: none; border: 2px dashed rgba(255,255,255,0.6); background: rgba(0,0,128,0.4); }
+
+    .ico svg, .ico img { width: 48px; height: 48px; display: block; margin: 0 auto 5px; image-rendering: pixelated; }
+
+    .ico-label {
+      color: #fff;
+      font-size: 12px;
+      text-shadow: 1px 1px 2px #000, -1px -1px 2px #000;
+      line-height: 1.3;
+      word-break: break-word;
+      display: block;
+    }
+
+    /* ================================================================
+       FENÊTRES WIN95
+       ================================================================ */
+    .win {
+      position: absolute;
+      min-width: 240px;
+      min-height: 80px;
+      background: #c0c0c0;
+      /* Bordure 3D authentique Win95 */
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf, 4px 4px 0 rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+    }
+    .win.open { display: flex; }
+
+    /* Barre de titre */
+    .win-title-bar {
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      padding: 3px 4px 3px 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: move;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .win-title-bar.inactive { background: #808080; }
+
+    .win-title-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .win-title-text {
+      color: #fff;
+      font-weight: bold;
+      font-size: 12px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .win-btns { display: flex; gap: 2px; flex-shrink: 0; }
+
+    .win-btn {
+      width: 18px;
+      height: 16px;
+      background: #c0c0c0;
+      border-top: 1px solid #fff;
+      border-left: 1px solid #fff;
+      border-right: 1px solid #404040;
+      border-bottom: 1px solid #404040;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      color: #000;
+    }
+    .win-btn:active {
+      border-top: 1px solid #404040;
+      border-left: 1px solid #404040;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+    }
+    .win-btn-disabled { cursor: not-allowed; opacity: 0.5; pointer-events: none; }
+
+    /* Barre de menu optionnelle */
+    .win-menu-bar {
+      background: #c0c0c0;
+      padding: 2px 6px;
+      font-size: 12px;
+      border-bottom: 1px solid #808080;
+      flex-shrink: 0;
+    }
+
+    /* Zone de contenu */
+    .win-body {
+      flex: 1;
+      overflow: auto;
+      padding: 10px;
+    }
+
+    /* ================================================================
+       BARRE DES TÂCHES
+       ================================================================ */
+    #taskbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 42px;
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      box-shadow: inset 0 1px 0 #dfdfdf;
+      display: none;
+      align-items: center;
+      padding: 0 4px;
+      gap: 4px;
+      z-index: 8500;
+    }
+
+    #start-btn {
+      height: 32px;
+      padding: 0 10px;
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: bold;
+      font-size: 14px;
+      font-family: inherit;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #start-btn:active, #start-btn.pressed {
+      border-top: 2px solid #404040;
+      border-left: 2px solid #404040;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      padding-left: 12px;
+    }
+
+    #taskbar-sep {
+      width: 2px;
+      height: 32px;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      flex-shrink: 0;
+    }
+
+    #taskbar-wins {
+      flex: 1;
+      display: flex;
+      gap: 4px;
+      overflow: hidden;
+    }
+
+    .tb-win-btn {
+      height: 28px;
+      padding: 0 8px;
+      background: #c0c0c0;
+      border-top: 1px solid #fff;
+      border-left: 1px solid #fff;
+      border-right: 1px solid #404040;
+      border-bottom: 1px solid #404040;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      display: flex; align-items: center; gap: 4px;
+      max-width: 180px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .tb-win-btn.active {
+      border-top: 1px solid #404040;
+      border-left: 1px solid #404040;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      background: #b0b0b0;
+    }
+
+    #taskbar-clock {
+      background: #c0c0c0;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      padding: 4px 8px;
+      font-size: 13px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ================================================================
+       MENU DÉMARRER
+       ================================================================ */
+    #start-menu {
+      position: fixed;
+      bottom: 42px; left: 0;
+      width: 220px;
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      box-shadow: 3px 0 6px rgba(0,0,0,0.4);
+      display: none;
+      flex-direction: row;
+      z-index: 9000;
+    }
+    #start-menu.open { display: flex; }
+
+    #start-sidebar {
+      width: 28px;
+      background: #808080;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      color: #fff;
+      font-weight: bold;
+      font-size: 14px;
+      letter-spacing: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 8px 0;
+    }
+
+    #start-items { flex: 1; padding: 4px 0; }
+
+    .sm-item {
+      padding: 7px 12px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px;
+    }
+    .sm-item:hover { background: #000080; color: #fff; }
+    .sm-item svg { width: 24px; height: 24px; flex-shrink: 0; }
+
+    .sm-sep { height: 1px; background: #808080; margin: 4px 8px; border-bottom: 1px solid #fff; }
+
+    /* ================================================================
+       COMPOSANTS INTERNES AUX APPS
+       ================================================================ */
+
+    /* Section title (bandeau bleu) */
+    .sec-title {
+      background: #000080;
+      color: #fff;
+      font-weight: bold;
+      font-size: 13px;
+      padding: 4px 10px;
+      margin: 0 0 10px;
+    }
+
+    /* --- APP 1 : Mon Métier --- */
+    .id-card {
+      background: #fff;
+      border: 2px inset #808080;
+      padding: 14px;
+      display: flex;
+      gap: 16px;
+    }
+    .id-photo {
+      width: 100px;
+      height: 128px;
+      background: #c0c0c0;
+      border: 2px inset #808080;
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .id-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .id-photo .placeholder {
+      font-size: 10px; color: #666; text-align: center; line-height: 1.4; padding: 6px;
+    }
+    .id-info { flex: 1; }
+    .id-name { font-size: 22px; font-weight: bold; color: #000080; border-bottom: 3px solid #000080; padding-bottom: 4px; margin-bottom: 8px; }
+    .id-role { font-size: 15px; font-weight: bold; margin-bottom: 2px; }
+    .id-company { font-size: 13px; color: #444; margin-bottom: 14px; }
+    .id-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .stat {
+      background: #000080; color: #fff;
+      padding: 8px 10px; text-align: center;
+    }
+    .stat-num { font-size: 28px; font-weight: bold; display: block; line-height: 1; }
+    .stat-lbl { font-size: 10px; opacity: 0.85; }
+    .id-tagline { font-size: 13px; font-style: italic; color: #444; border-left: 4px solid #000080; padding-left: 10px; line-height: 1.5; }
+
+    /* --- APP 2 : Environnement --- */
+    .sched { display: flex; flex-direction: column; gap: 6px; }
+    .sched-slot {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 10px;
+      background: #fff;
+      border: 1px solid #808080;
+      border-left: 5px solid #000080;
+    }
+    .sched-time { font-weight: bold; color: #000080; font-size: 13px; min-width: 52px; }
+    .sched-act { font-size: 14px; }
+    .vibe { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .vibe-tag { background: #000080; color: #fff; padding: 4px 10px; font-size: 12px; }
+
+    /* --- APP 3 : Réalisations --- */
+    .explorer-bar {
+      background: #c0c0c0;
+      padding: 3px 10px;
+      font-size: 11px;
+      border-bottom: 1px solid #808080;
+      color: #000;
+    }
+    .proj-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 10px;
+    }
+    .proj-item { text-align: center; cursor: pointer; padding: 4px; border: 2px solid transparent; }
+    .proj-item:hover { background: #000080; border-color: #000080; }
+    .proj-item:hover .proj-name { color: #fff; }
+    .proj-thumb-img {
+      width: 100%;
+      aspect-ratio: 16/10;
+      background: #404040;
+      border: 2px inset #808080;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 5px;
+      position: relative;
+    }
+    .proj-thumb-img img { width: 100%; height: 100%; object-fit: cover; }
+    .proj-placeholder {
+      font-size: 9px; color: #aaa; text-align: center; padding: 4px; line-height: 1.4;
+    }
+    .proj-name { font-size: 12px; color: #000; }
+
+    /* Lightbox */
+    #lightbox {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none; align-items: center; justify-content: center;
+      z-index: 9800;
+    }
+    #lightbox.open { display: flex; }
+    #lb-win {
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      max-width: 80vw;
+    }
+    #lb-titlebar {
+      background: linear-gradient(90deg, #000080, #1084d0);
+      padding: 3px 6px; display: flex; justify-content: space-between; align-items: center;
+      color: #fff; font-weight: bold; font-size: 13px;
+    }
+    #lb-img { max-width: 75vw; max-height: 65vh; display: block; padding: 10px; }
+    #lb-caption { padding: 0 10px 10px; font-size: 13px; font-style: italic; color: #444; }
+
+    /* --- APP 4 : Compétences --- */
+    .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .skill-row { margin-bottom: 10px; }
+    .skill-lbl { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; font-weight: bold; }
+    .skill-track {
+      height: 18px;
+      background: #fff;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+    }
+    .skill-fill {
+      height: 100%;
+      background: #000080;
+      width: 0;
+      transition: width 1.2s ease;
+    }
+
+    .cb-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    .cb-box {
+      width: 16px; height: 16px; flex-shrink: 0;
+      background: #fff;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: bold; color: #000;
+    }
+
+    .tool-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .tool-tag { background: #000; color: #fff; padding: 3px 8px; font-size: 11px; font-weight: bold; }
+
+    /* --- APP 5 : Défis --- */
+    .err-dlg {
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      margin-bottom: 14px;
+    }
+    .err-dlg-title {
+      background: linear-gradient(90deg, #000080, #1084d0);
+      padding: 3px 8px; color: #fff; font-weight: bold; font-size: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .err-dlg-title.resolved { background: linear-gradient(90deg, #005000, #008800); }
+    .err-dlg-body { padding: 12px; display: flex; gap: 14px; align-items: flex-start; }
+    .err-ico { font-size: 32px; flex-shrink: 0; line-height: 1; }
+    .err-msg { font-size: 14px; font-weight: bold; color: #000; margin-bottom: 4px; }
+    .err-sub { font-size: 12px; color: #555; }
+    .err-solution { color: #005000; font-size: 13px; font-weight: bold; margin-top: 8px; display: none; }
+    .err-solution.visible { display: block; }
+    .err-btns { display: flex; gap: 8px; justify-content: flex-end; padding: 0 12px 10px; }
+
+    /* Boutons Win95 génériques */
+    .btn95 {
+      padding: 4px 16px;
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    .btn95:active {
+      border-top: 2px solid #404040;
+      border-left: 2px solid #404040;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+    }
+
+    /* --- Bloc-notes Lisez-moi --- */
+    .notepad {
+      background: #fff;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #000;
+      white-space: pre-wrap;
+    }
+
+    /* --- Poste / Corbeille fun --- */
+    .fun-body { text-align: center; padding: 20px; }
+    .fun-ico { font-size: 56px; display: block; margin-bottom: 14px; }
+    .fun-body p { font-size: 14px; color: #333; line-height: 1.8; }
+    del { color: #808080; }
+
+    /* ================================================================
+       DIALOGUE SHUTDOWN
+       ================================================================ */
+    #shutdown {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 420px;
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: none;
+    }
+    #shutdown.open { display: block; }
+    .dlg-title {
+      background: linear-gradient(90deg, #000080, #1084d0);
+      padding: 4px 8px; color: #fff; font-weight: bold; font-size: 13px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .dlg-body { padding: 22px; display: flex; gap: 18px; align-items: flex-start; font-size: 14px; line-height: 1.6; }
+    .dlg-btns { padding: 0 22px 18px; display: flex; justify-content: center; gap: 10px; }
+
+    /* ================================================================
+       À PROPOS
+       ================================================================ */
+    #about {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 380px;
+      background: #c0c0c0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: none;
+    }
+    #about.open { display: block; }
+    #about-body { padding: 20px; text-align: center; font-size: 13px; line-height: 1.7; }
+    #about-body .about-logo { font-size: 36px; font-weight: bold; color: #000080; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================
+     BOOT SCREEN
+     ================================================================ -->
+<div id="boot">
+  <div id="boot-logo">PaulOS</div>
+  <div id="boot-subtitle">Édition 2031 — Directeur Artistique</div>
+  <div id="boot-progress-label">Initialisation du système créatif...</div>
+  <div id="boot-bar-wrap">
+    <div id="boot-bar"></div>
+  </div>
+  <div id="boot-build">Version 2031.06.17 &nbsp;|&nbsp; Build DA Senior &nbsp;|&nbsp; Grinto Inc.</div>
+  <div id="boot-skip" onclick="skipBoot()">[ Cliquer pour passer ]</div>
+</div>
+
+<!-- ================================================================
+     BUREAU
+     ================================================================ -->
+<div id="desktop">
+
+  <!-- Icônes colonne gauche -->
+  <div class="ico" style="left:14px;top:14px;" tabindex="0"
+       onclick="openWin('w-metier')" onkeydown="if(event.key==='Enter')openWin('w-metier')">
+    <!-- Icône ID card -->
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="6" width="44" height="36" rx="1" fill="#fff" stroke="#000" stroke-width="1.5"/>
+      <rect x="2" y="6" width="44" height="9" fill="#000080"/>
+      <text x="24" y="14" fill="#fff" font-size="7" font-weight="bold" text-anchor="middle" font-family="Tahoma">GRINTO · 2031</text>
+      <rect x="6" y="19" width="13" height="17" fill="#c0c0c0" stroke="#808080"/>
+      <circle cx="12" cy="25" r="4" fill="#808080"/>
+      <path d="M6 36 Q12 30 18 36" fill="#808080"/>
+      <rect x="23" y="19" width="20" height="3" fill="#c0c0c0" stroke="#808080"/>
+      <rect x="23" y="25" width="14" height="3" fill="#c0c0c0" stroke="#808080"/>
+      <rect x="23" y="31" width="18" height="3" fill="#c0c0c0" stroke="#808080"/>
+    </svg>
+    <span class="ico-label">Mon métier</span>
+  </div>
+
+  <div class="ico" style="left:14px;top:105px;" tabindex="0"
+       onclick="openWin('w-env')" onkeydown="if(event.key==='Enter')openWin('w-env')">
+    <svg viewBox="0 0 48 48">
+      <rect x="2" y="4" width="44" height="40" rx="1" fill="#fff" stroke="#000" stroke-width="1.5"/>
+      <rect x="2" y="4" width="44" height="7" fill="#000080"/>
+      <line x1="2" y1="15" x2="46" y2="15" stroke="#c0c0c0"/>
+      <line x1="2" y1="24" x2="46" y2="24" stroke="#c0c0c0"/>
+      <line x1="2" y1="33" x2="46" y2="33" stroke="#c0c0c0"/>
+      <line x1="15" y1="11" x2="15" y2="44" stroke="#c0c0c0"/>
+      <rect x="17" y="17" width="10" height="5" fill="#1084d0" rx="1"/>
+      <rect x="29" y="26" width="14" height="5" fill="#000080" rx="1"/>
+    </svg>
+    <span class="ico-label">Mon environ&shy;nement</span>
+  </div>
+
+  <div class="ico" style="left:14px;top:196px;" tabindex="0"
+       onclick="openWin('w-real')" onkeydown="if(event.key==='Enter')openWin('w-real')">
+    <svg viewBox="0 0 48 48">
+      <rect x="1" y="6" width="32" height="26" fill="#c0c0c0" stroke="#000" stroke-width="1.5"/>
+      <rect x="3" y="8" width="28" height="22" fill="#404040"/>
+      <rect x="5" y="10" width="24" height="18" fill="#000080"/>
+      <polygon points="10,24 18,14 26,22 20,18 28,10" fill="#1084d0" opacity="0.6"/>
+      <rect x="12" y="32" width="10" height="6" fill="#808080"/>
+      <rect x="6" y="38" width="22" height="3" fill="#808080" stroke="#000"/>
+      <rect x="33" y="10" width="14" height="20" fill="#fff" stroke="#000"/>
+      <rect x="35" y="12" width="10" height="16" fill="#c0c0c0"/>
+      <rect x="36" y="13" width="8" height="7" fill="#008080"/>
+      <rect x="36" y="21" width="8" height="6" fill="#808080"/>
+    </svg>
+    <span class="ico-label">Mes réali&shy;sations</span>
+  </div>
+
+  <div class="ico" style="left:14px;top:287px;" tabindex="0"
+       onclick="openWin('w-skills')" onkeydown="if(event.key==='Enter')openWin('w-skills')">
+    <svg viewBox="0 0 48 48">
+      <rect x="2" y="2" width="44" height="44" fill="#c0c0c0" stroke="#000" stroke-width="1.5"/>
+      <rect x="6" y="8" width="24" height="4" fill="#000080"/>
+      <rect x="6" y="16" width="34" height="4" fill="#000080"/>
+      <rect x="6" y="24" width="20" height="4" fill="#000080"/>
+      <rect x="6" y="32" width="28" height="4" fill="#000080"/>
+      <rect x="32" y="8" width="10" height="4" fill="#c0c0c0" stroke="#808080"/>
+      <rect x="42" y="16" width="0" height="4" fill="#000080"/>
+      <rect x="28" y="24" width="14" height="4" fill="#c0c0c0" stroke="#808080"/>
+      <rect x="36" y="32" width="6" height="4" fill="#c0c0c0" stroke="#808080"/>
+    </svg>
+    <span class="ico-label">Mes compé&shy;tences</span>
+  </div>
+
+  <div class="ico" style="left:14px;top:378px;" tabindex="0"
+       onclick="openWin('w-defis')" onkeydown="if(event.key==='Enter')openWin('w-defis')">
+    <svg viewBox="0 0 48 48">
+      <rect x="2" y="6" width="44" height="36" fill="#ffffc0" stroke="#000" stroke-width="1.5"/>
+      <rect x="2" y="6" width="44" height="7" fill="#808080"/>
+      <text x="24" y="13" fill="#fff" font-size="7" font-weight="bold" text-anchor="middle" font-family="Tahoma">! Erreurs</text>
+      <text x="24" y="34" font-size="24" text-anchor="middle" fill="#c00000">⚠</text>
+    </svg>
+    <span class="ico-label">Mes défis</span>
+  </div>
+
+
+  <!-- Icônes déco droite -->
+  <div class="ico" style="right:14px;top:14px;" tabindex="0" onclick="openWin('w-poste')">
+    <svg viewBox="0 0 48 48">
+      <rect x="4" y="4" width="36" height="28" fill="#c0c0c0" stroke="#000" stroke-width="1.5"/>
+      <rect x="6" y="6" width="32" height="22" fill="#000080"/>
+      <rect x="8" y="8" width="28" height="18" fill="#1084d0" opacity="0.6"/>
+      <rect x="16" y="32" width="12" height="6" fill="#808080"/>
+      <rect x="8" y="38" width="28" height="4" fill="#808080" stroke="#000"/>
+    </svg>
+    <span class="ico-label">Poste de travail</span>
+  </div>
+
+  <div class="ico" style="right:14px;top:105px;" tabindex="0" onclick="openWin('w-corbeille')">
+    <svg viewBox="0 0 48 48">
+      <rect x="10" y="14" width="28" height="30" fill="#c0c0c0" stroke="#000" stroke-width="1.5"/>
+      <rect x="8" y="10" width="32" height="5" fill="#808080" stroke="#000"/>
+      <rect x="15" y="6" width="18" height="5" fill="#808080" stroke="#000"/>
+      <line x1="18" y1="20" x2="18" y2="38" stroke="#808080" stroke-width="1.5"/>
+      <line x1="24" y1="20" x2="24" y2="38" stroke="#808080" stroke-width="1.5"/>
+      <line x1="30" y1="20" x2="30" y2="38" stroke="#808080" stroke-width="1.5"/>
+    </svg>
+    <span class="ico-label">Corbeille</span>
+  </div>
+
+</div><!-- /desktop -->
+
+
+<!-- ================================================================
+     FENÊTRES
+     ================================================================ -->
+
+<!-- W1 : Mon Métier -->
+<div class="win" id="w-metier" style="width:560px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-metier')">
+    <svg class="win-title-icon" viewBox="0 0 16 16"><rect width="16" height="16" fill="#000080"/><text x="8" y="12" fill="#fff" font-size="7" text-anchor="middle" font-weight="bold">ID</text></svg>
+    <span class="win-title-text">Mon métier — Fiche de poste</span>
+    <div class="win-btns">
+      <div class="win-btn win-btn-disabled">_</div>
+      <div class="win-btn" title="Agrandir">□</div>
+      <div class="win-btn" onclick="closeWin('w-metier')" title="Fermer">✕</div>
+    </div>
+  </div>
+  <div class="win-body">
+    <div class="id-card">
+      <div class="id-photo" id="photo-container">
+        <img src="Assets/avatar.png" alt="Paul"
+             onerror="this.style.display='none'; document.getElementById('photo-placeholder').style.display='flex'">
+        <div id="photo-placeholder" style="display:none; width:100%;height:100%;align-items:center;justify-content:center;">
+          <div class="placeholder">📷<br>assets/<br>avatar.png</div>
+        </div>
+      </div>
+      <div class="id-info">
+        <div class="id-name">Paul</div>
+        <!-- 🔧 MODIFIE : ton titre exact -->
+        <div class="id-role">Directeur Artistique Senior</div>
+        <div class="id-company">Lead Créatif · Grinto · Depuis 2028</div>
+        <div class="id-stats">
+          <!-- 🔧 MODIFIE : tes vrais chiffres -->
+          <div class="stat"><span class="stat-num">5</span><span class="stat-lbl">ans d'XP créatif</span></div>
+          <div class="stat"><span class="stat-num">3</span><span class="stat-lbl">personnes pilotées</span></div>
+          <div class="stat"><span class="stat-num">20+</span><span class="stat-lbl">campagnes livrées</span></div>
+          <div class="stat"><span class="stat-num">360°</span><span class="stat-lbl">vision créative</span></div>
+        </div>
+        <!-- 🔧 MODIFIE : ta phrase d'accroche -->
+        <div class="id-tagline">"Je transforme les idées en expériences visuelles qui marquent."</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- W2 : Mon Environnement -->
+<div class="win" id="w-env" style="width:500px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-env')">
+    <svg class="win-title-icon" viewBox="0 0 16 16"><rect width="16" height="16" fill="#000080"/><text x="8" y="12" fill="#fff" font-size="7" text-anchor="middle">CAL</text></svg>
+    <span class="win-title-text">Mon environnement — Journée type</span>
+    <div class="win-btns">
+      <div class="win-btn win-btn-disabled">_</div>
+      <div class="win-btn">□</div>
+      <div class="win-btn" onclick="closeWin('w-env')">✕</div>
+    </div>  
+  </div>
+  <div class="win-body">
+    <div class="sec-title">📅 Ma journée chez Grinto</div>
+    <div class="sched">
+      <div class="sched-slot"><span class="sched-time">09:00</span><span class="sched-act">☕ Petit café pour commencer la journée</span></div>
+      <div class="sched-slot"><span class="sched-time">10:00</span><span class="sched-act">🎨 Réunions hebdo équipe</span></div>
+      <div class="sched-slot"><span class="sched-time">12:30</span><span class="sched-act">🍕 Lunch — miam miam</span></div>
+      <div class="sched-slot"><span class="sched-time">14:00</span><span class="sched-act">📸 Travail de production</span></div>
+      <div class="sched-slot"><span class="sched-time">16:30</span><span class="sched-act">🔍 Petit café pour finir la journée #potins</span></div>
+      <div class="sched-slot"><span class="sched-time">18:00</span><span class="sched-act">🚀 After work</span></div>
+    </div>
+    <div class="vibe">
+      <span class="vibe-tag">Présentiel</span>
+      <span class="vibe-tag">Bon ambiance</span>
+      <span class="vibe-tag">Chill</span>
+      <span class="vibe-tag">Creativité</span>
+      <span class="vibe-tag">Stabilité</span>
+      <span class="vibe-tag">Grinto since 2024</span>
+    </div>
+  </div>
+</div>
+
+<!-- W3 : Mes Réalisations -->
+<div class="win" id="w-real" style="width:620px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-real')">
+    <svg class="win-title-icon" viewBox="0 0 16 16"><rect width="16" height="16" fill="#808080"/><rect x="1" y="1" width="14" height="10" fill="#000080"/><rect x="5" y="12" width="6" height="3" fill="#808080"/></svg>
+    <span class="win-title-text">Mes réalisations — C:\PaulOS\Portfolio\</span>
+    <div class="win-btns">
+      <div class="win-btn win-btn-disabled">_</div>
+      <div class="win-btn">□</div>
+      <div class="win-btn" onclick="closeWin('w-real')">✕</div>
+    </div>
+  </div>
+  <div class="explorer-bar">5 objets &nbsp;|&nbsp; Affichage : Grandes icônes &nbsp;|&nbsp; Dossier : Portfolio 2026–2031</div>
+  <div class="win-body" style="padding:0;">
+    <div class="proj-grid">
+
+      <!-- Projet 1 -->
+      <div class="proj-item" onclick="openLightbox('Mental Rush','Identité de marque & Social Media — direction artistique complète','Assets/projet-mental-rush.png')">
+        <div class="proj-thumb-img">
+          <img src="Assets/projet-mental-rush.png" alt="Mental Rush"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="proj-placeholder" style="display:none">📁<br>Assets/<br>projet-mental-rush.png</div>
+        </div>
+        <div class="proj-name">Mental Rush</div>
+      </div>
+
+      <!-- Projet 2 -->
+      <div class="proj-item" onclick="openLightbox('PokeCollect','App mobile — UX/UI design & développement front-end','Assets/projet-pokecollect.png')">
+        <div class="proj-thumb-img">
+          <img src="Assets/projet-pokecollect.png" alt="PokeCollect"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="proj-placeholder" style="display:none">📁<br>Assets/<br>projet-pokecollect.png</div>
+        </div>
+        <div class="proj-name">PokeCollect</div>
+      </div>
+
+      <!-- Projet 3 -->
+      <div class="proj-item" onclick="openLightbox('Campagne Agence','Campagne 360° — concept, DA, production complète','Assets/projet-campagne.png')">
+        <div class="proj-thumb-img">
+          <img src="Assets/projet-campagne.png" alt="Campagne"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="proj-placeholder" style="display:none">📁<br>Assets/<br>projet-campagne.png</div>
+        </div>
+        <div class="proj-name">Campagne Agence</div>
+      </div>
+
+      <!-- Projet 4 -->
+      <div class="proj-item" onclick="openLightbox('Photo & Vidéo (Fuji X-T3)','Shooting photo & vidéo — direction artistique on-set, post-prod','Assets/projet-photo.png')">
+        <div class="proj-thumb-img">
+          <img src="Assets/projet-photo.png" alt="Photo"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="proj-placeholder" style="display:none">📁<br>Assets/<br>projet-photo.png</div>
+        </div>
+        <div class="proj-name">Photo / Vidéo</div>
+      </div>
+
+      <!-- Projet 5 -->
+      <div class="proj-item" onclick="openLightbox('Branding','Identité visuelle — logotype, charte, déclinaisons toutes plateformes','Assets/projet-branding.png')">
+        <div class="proj-thumb-img">
+          <img src="Assets/projet-branding.png" alt="Branding"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="proj-placeholder" style="display:none">📁<br>Assets/<br>projet-branding.png</div>
+        </div>
+        <div class="proj-name">Branding</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- W4 : Mes Compétences -->
+<div class="win" id="w-skills" style="width:560px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-skills')">
+    <svg class="win-title-icon" viewBox="0 0 16 16"><rect width="16" height="16" fill="#c0c0c0" stroke="#808080"/><rect x="1" y="3" width="8" height="2" fill="#000080"/><rect x="1" y="7" width="13" height="2" fill="#000080"/><rect x="1" y="11" width="6" height="2" fill="#000080"/></svg>
+    <span class="win-title-text">Mes compétences — Panneau de configuration</span>
+    <div class="win-btns">
+      <div class="win-btn win-btn-disabled">_</div>
+      <div class="win-btn">□</div>
+      <div class="win-btn" onclick="closeWin('w-skills')">✕</div>
+    </div>
+  </div>
+  <div class="win-body">
+    <div class="skills-grid">
+      <!-- Colonne gauche : barres -->
+      <div>
+        <div class="sec-title">⚡ Skills techniques</div>
+        <div class="skill-row">
+          <div class="skill-lbl"><span>Direction artistique</span><span>95%</span></div>
+          <div class="skill-track"><div class="skill-fill" data-w="95"></div></div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-lbl"><span>Branding</span><span>90%</span></div>
+          <div class="skill-track"><div class="skill-fill" data-w="90"></div></div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-lbl"><span>UX / UI Design</span><span>80%</span></div>
+          <div class="skill-track"><div class="skill-fill" data-w="80"></div></div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-lbl"><span>Photo & Vidéo</span><span>85%</span></div>
+          <div class="skill-track"><div class="skill-fill" data-w="85"></div></div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-lbl"><span>Développement front</span><span>70%</span></div>
+          <div class="skill-track"><div class="skill-fill" data-w="70"></div></div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-lbl"><span>Social Media</span><span>88%</span></div>
+          <div class="skill-track"><div class="skill-fill" data-w="88"></div></div>
+        </div>
+        <br>
+        <div class="sec-title">🛠 Outils</div>
+        <div class="tool-tags">
+          <span class="tool-tag">Figma</span>
+          <span class="tool-tag">Photoshop</span>
+          <span class="tool-tag">Illustrator</span>
+          <span class="tool-tag">Premiere</span>
+          <span class="tool-tag">After Effects</span>
+          <span class="tool-tag">HTML/CSS</span>
+          <span class="tool-tag">JavaScript</span>
+          <span class="tool-tag">Fuji X-T3</span>
+        </div>
+      </div>
+      <!-- Colonne droite : checkboxes -->
+      <div>
+        <div class="sec-title">✅ Qualités</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Créativité</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Rigueur</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Polyvalence</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Leadership</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Curiosité permanente</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Vision stratégique</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Gestion de projet</div>
+        <div class="cb-item"><div class="cb-box">✓</div> Pont créatif ↔ technique</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- W5 : Mes Défis -->
+<div class="win" id="w-defis" style="width:520px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-defis')">
+    <svg class="win-title-icon" viewBox="0 0 16 16"><rect width="16" height="16" fill="#ffff00"/><text x="8" y="13" fill="#c00" font-size="13" text-anchor="middle" font-weight="bold">!</text></svg>
+    <span class="win-title-text">Mes défis — Journal des erreurs résolues</span>
+    <div class="win-btns">
+      <div class="win-btn win-btn-disabled">_</div>
+      <div class="win-btn">□</div>
+      <div class="win-btn" onclick="closeWin('w-defis')">✕</div>
+    </div>
+  </div>
+  <div class="win-body">
+
+    <!-- Défi 1 -->
+    <div class="err-dlg" id="ed1">
+      <div class="err-dlg-title" id="ed1-title">
+        <span>⚠</span> Erreur — TEAM_JUNIOR_OVERFLOW.exe
+      </div>
+      <div class="err-dlg-body">
+        <div class="err-ico" id="ed1-ico">🔴</div>
+        <div>
+          <div class="err-msg">Gérer une équipe junior pour la première fois</div>
+          <div class="err-sub">Montée en compétence · transmission · leadership</div>
+          <div class="err-solution" id="es1">✅ Résolu : Style leadership par l'exemple. Chaque junior est devenu un vrai atout créatif pour l'équipe.</div>
+        </div>
+      </div>
+      <div class="err-btns">
+        <button class="btn95" onclick="resolveErr(1)">Résoudre</button>
+        <button class="btn95" onclick="dismissErr('ed1')">Fermer</button>
+      </div>
+    </div>
+
+    <!-- Défi 2 -->
+    <div class="err-dlg" id="ed2">
+      <div class="err-dlg-title" id="ed2-title">
+        <span>⚠</span> Erreur — DEADLINE_CRITICAL_FAILURE.exe
+      </div>
+      <div class="err-dlg-body">
+        <div class="err-ico" id="ed2-ico">🔴</div>
+        <div>
+          <div class="err-msg">Livrer sous pression extrême (client urgent)</div>
+          <div class="err-sub">Stress · priorisation · qualité vs délai</div>
+          <div class="err-solution" id="es2">✅ Résolu : Découper, prioriser, jamais sacrifier la qualité perçue. La pression est un outil de focus.</div>
+        </div>
+      </div>
+      <div class="err-btns">
+        <button class="btn95" onclick="resolveErr(2)">Résoudre</button>
+        <button class="btn95" onclick="dismissErr('ed2')">Fermer</button>
+      </div>
+    </div>
+
+    <!-- Défi 3 -->
+    <div class="err-dlg" id="ed3">
+      <div class="err-dlg-title" id="ed3-title">
+        <span>⚠</span> Erreur — DEV_SKILLS_NOT_FOUND.exe
+      </div>
+      <div class="err-dlg-body">
+        <div class="err-ico" id="ed3-ico">🔴</div>
+        <div>
+          <div class="err-msg">Monter en compétence dev front en autodidacte</div>
+          <div class="err-sub">Alternance DA + apprendre HTML/CSS/JS de zéro</div>
+          <div class="err-solution" id="es3">✅ Résolu : Je parle aujourd'hui le même langage que les devs. Pont unique entre vision créative et exécution technique.</div>
+        </div>
+      </div>
+      <div class="err-btns">
+        <button class="btn95" onclick="resolveErr(3)">Résoudre</button>
+        <button class="btn95" onclick="dismissErr('ed3')">Fermer</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- W7 : Poste de travail (déco) -->
+<div class="win" id="w-poste" style="width:380px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-poste')">
+    <span style="font-size:14px;">🖥</span>
+    <span class="win-title-text">Poste de travail</span>
+    <div class="win-btns">
+      <div class="win-btn">_</div>
+      <div class="win-btn">□</div>
+      <div class="win-btn" onclick="closeWin('w-poste')">✕</div>
+    </div>
+  </div>
+  <div class="win-body">
+    <div class="fun-body">
+      <span class="fun-ico">🧠</span>
+      <p>
+        <strong>Paul_DA_Senior.exe</strong><br><br>
+        Processeur : Créativité × Technique<br>
+        RAM : Idées illimitées (8 To)<br>
+        Stockage : 5 ans XP + en croissance<br>
+        Réseau : Studio / Terrain / Clients<br>
+        OS : PaulOS 2031 (build stable ✓)
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- W8 : Corbeille (déco) -->
+<div class="win" id="w-corbeille" style="width:360px;">
+  <div class="win-title-bar" onmousedown="startDrag(event,'w-corbeille')">
+    <span style="font-size:14px;">🗑</span>
+    <span class="win-title-text">Corbeille</span>
+    <div class="win-btns">
+      <div class="win-btn">_</div>
+      <div class="win-btn">□</div>
+      <div class="win-btn" onclick="closeWin('w-corbeille')">✕</div>
+    </div>
+  </div>
+  <div class="win-body">
+    <div class="fun-body">
+      <span class="fun-ico">🗑</span>
+      <p>
+        <del>Mes doutes</del><br>
+        <del>Les idées trop sages</del><br>
+        <del>La peur de rater</del><br>
+        <del>Les slides PowerPoint classiques</del><br>
+        <del>Les compromis créatifs honteux</del>
+      </p>
+      <p style="margin-top:14px;font-size:11px;color:#666;">Corbeille vidée le 17/06/2031</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     LIGHTBOX (agrandissement projets)
+     ================================================================ -->
+<div id="lightbox" onclick="closeLightbox()">
+  <div id="lb-win" onclick="event.stopPropagation()">
+    <div id="lb-titlebar">
+      <span id="lb-title">Projet</span>
+      <div class="win-btn" onclick="closeLightbox()" style="background:#c0c0c0;color:#000;">✕</div>
+    </div>
+    <img id="lb-img" src="" alt="" onerror="this.style.display='none'">
+    <div id="lb-caption"></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     DIALOGUE SHUTDOWN
+     ================================================================ -->
+<div id="shutdown">
+  <div class="dlg-title">
+    <span>Arrêt du système</span>
+    <div class="win-btn" onclick="closeShutdown()" style="background:#c0c0c0;color:#000;">✕</div>
+  </div>
+  <div class="dlg-body">
+    <span style="font-size:48px;">💾</span>
+    <div>
+      <strong>Merci de votre attention.</strong><br><br>
+      PaulOS 2031 peut maintenant être<br>
+      noté en toute sécurité.<br><br>
+      <em style="font-size:12px;color:#555">Il est recommandé de mettre 20/20<br>avant d'éteindre l'ordinateur.</em>
+    </div>
+  </div>
+  <div class="dlg-btns">
+    <button class="btn95" onclick="closeShutdown()">OK</button>
+  </div>
+</div>
+
+<!-- ================================================================
+     À PROPOS DE PaulOS
+     ================================================================ -->
+<div id="about">
+  <div class="dlg-title">
+    <span>À propos de PaulOS</span>
+    <div class="win-btn" onclick="closeAbout()" style="background:#c0c0c0;color:#000;">✕</div>
+  </div>
+  <div id="about-body">
+    <div class="about-logo">PaulOS 2031</div>
+    <div style="font-size:13px;color:#444;margin-bottom:12px;">Édition Directeur Artistique</div>
+    <div style="font-size:12px;line-height:1.8;">
+      Version 2031.06.17<br>
+      Développé par Paul pour prouver<br>
+      qu'un DA peut aussi coder.<br><br>
+      <strong>Technologies :</strong> HTML · CSS · JavaScript vanilla<br>
+      <strong>Inspiré de :</strong> Windows 95/98<br>
+      <strong>Zéro dépendance externe.</strong>
+    </div>
+  </div>
+  <div class="dlg-btns">
+    <button class="btn95" onclick="closeAbout()">OK</button>
+  </div>
+</div>
+
+<!-- ================================================================
+     BARRE DES TÂCHES
+     ================================================================ -->
+<div id="taskbar">
+
+  <button id="start-btn" onclick="toggleStartMenu()">
+    <!-- Logo Windows 4 couleurs -->
+    <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0">
+      <rect x="0" y="0" width="7" height="7" fill="#f00"/>
+      <rect x="9" y="0" width="7" height="7" fill="#0a0"/>
+      <rect x="0" y="9" width="7" height="7" fill="#00f"/>
+      <rect x="9" y="9" width="7" height="7" fill="#dd0"/>
+    </svg>
+    Démarrer
+  </button>
+
+  <div id="taskbar-sep"></div>
+
+  <div id="taskbar-wins"></div>
+
+  <div id="taskbar-clock" id="clock"></div>
+
+</div>
+
+<!-- ================================================================
+     MENU DÉMARRER
+     ================================================================ -->
+<div id="start-menu">
+  <div id="start-sidebar">PaulOS 2031</div>
+  <div id="start-items">
+    <div class="sm-item" onclick="openFromMenu('w-metier')">
+      <svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#000080"/><text x="12" y="17" fill="#fff" font-size="9" text-anchor="middle" font-weight="bold">ID</text></svg>
+      Mon métier
+    </div>
+    <div class="sm-item" onclick="openFromMenu('w-env')">
+      <svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#000080"/><text x="12" y="17" fill="#fff" font-size="8" text-anchor="middle">CAL</text></svg>
+      Mon environnement
+    </div>
+    <div class="sm-item" onclick="openFromMenu('w-real')">
+      <svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#808080"/><rect x="2" y="2" width="20" height="14" fill="#000080"/></svg>
+      Mes réalisations
+    </div>
+    <div class="sm-item" onclick="openFromMenu('w-skills')">
+      <svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#c0c0c0" stroke="#808080"/><rect x="2" y="6" width="10" height="3" fill="#000080"/><rect x="2" y="11" width="18" height="3" fill="#000080"/><rect x="2" y="16" width="7" height="3" fill="#000080"/></svg>
+      Mes compétences
+    </div>
+    <div class="sm-item" onclick="openFromMenu('w-defis')">
+      <svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#ffff00"/><text x="12" y="19" fill="#c00" font-size="18" text-anchor="middle" font-weight="bold">!</text></svg>
+      Mes défis
+    </div>
+    <div class="sm-sep"></div>
+    <div class="sm-item" onclick="showAbout()">
+      <svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#1084d0"/><text x="12" y="18" fill="#fff" font-size="16" text-anchor="middle" font-weight="bold">?</text></svg>
+      À propos de PaulOS
+    </div>
+    <div class="sm-item" onclick="doShutdown()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#c0c0c0" stroke="#808080"/><line x1="12" y1="4" x2="12" y2="12" stroke="#000" stroke-width="2"/><path d="M6 7 A8 8 0 1 0 18 7" fill="none" stroke="#000" stroke-width="2"/></svg>
+      Éteindre...
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     JAVASCRIPT
+     ================================================================ -->
+<script>
+/* ============================================================
+   ÉTAT GLOBAL
+   ============================================================ */
+let zTop = 100;           // z-index courant
+let openWins = {};        // { winId: { title, minimized } }
+let drag = null;          // état du drag courant
+let openCount = 0;        // compteur pour décaler les fenêtres
+
+const WIN_TITLES = {
+  'w-metier':    'Mon métier',
+  'w-env':       'Mon environnement',
+  'w-real':      'Mes réalisations',
+  'w-skills':    'Mes compétences',
+  'w-defis':     'Mes défis',
+  'w-poste':     'Poste de travail',
+  'w-corbeille': 'Corbeille',
+};
+
+/* ============================================================
+   BOOT SCREEN
+   ============================================================ */
+(function boot() {
+  const bar = document.getElementById('boot-bar');
+  const lbl = document.getElementById('boot-progress-label');
+  const msgs = [
+    'Initialisation du système créatif...',
+    'Chargement des modules DA Senior...',
+    'Montage du portfolio...',
+    'Calibrage de la vision 360°...',
+    'PaulOS 2031 prêt.',
+  ];
+  let pct = 0, msgIdx = 0;
+
+  const iv = setInterval(() => {
+    pct += Math.random() * 10 + 5;
+    if (pct >= 100) {
+      pct = 100;
+      clearInterval(iv);
+      setTimeout(launchDesktop, 600);
+    }
+    bar.style.width = Math.min(pct, 100) + '%';
+    const newIdx = Math.min(Math.floor(pct / (100 / msgs.length)), msgs.length - 1);
+    if (newIdx > msgIdx) { msgIdx = newIdx; lbl.textContent = msgs[msgIdx]; }
+  }, 100);
+})();
+
+function skipBoot() { launchDesktop(); }
+
+function launchDesktop() {
+  const boot = document.getElementById('boot');
+  if (boot.style.opacity === '0') return; // déjà lancé
+  boot.style.transition = 'opacity 0.4s';
+  boot.style.opacity = '0';
+  setTimeout(() => {
+    boot.style.display = 'none';
+    document.getElementById('desktop').style.display = 'block';
+    document.getElementById('taskbar').style.display = 'flex';
+    startClock();
+  }, 400);
+}
+
+/* ============================================================
+   HORLOGE (affiche l'heure réelle mais en 2031)
+   ============================================================ */
+function startClock() {
+  const el = document.getElementById('taskbar-clock');
+  function tick() {
+    const n = new Date();
+    const hh = String(n.getHours()).padStart(2,'0');
+    const mm = String(n.getMinutes()).padStart(2,'0');
+    const dd = String(n.getDate()).padStart(2,'0');
+    const mo = String(n.getMonth()+1).padStart(2,'0');
+    el.textContent = hh + ':' + mm + '  ' + dd + '/' + mo + '/2031';
+  }
+  tick();
+  setInterval(tick, 10000);
+}
+
+/* ============================================================
+   GESTION DES FENÊTRES
+   ============================================================ */
+
+function openWin(id) {
+  closeStartMenu();
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // Déjà ouverte & minimisée → restaurer
+  if (openWins[id] && openWins[id].min) {
+    el.style.display = 'flex';
+    el.classList.add('open');
+    openWins[id].min = false;
+    front(id);
+    refreshTaskbar();
+    return;
+  }
+
+  // Déjà ouverte & visible → juste mettre devant
+  if (openWins[id]) {
+    front(id);
+    return;
+  }
+
+  // Taille 80% du bureau disponible, centrée
+  const W = Math.floor(window.innerWidth * 0.80);
+  const H = Math.floor((window.innerHeight - 42) * 0.80);
+  const L = Math.floor((window.innerWidth - W) / 2);
+  const T = Math.floor(((window.innerHeight - 42) - H) / 2);
+  el.style.width  = W + 'px';
+  el.style.height = H + 'px';
+  el.style.left   = L + 'px';
+  el.style.top    = T + 'px';
+  openCount++;
+
+  el.style.display = '';   /* efface tout inline display:none résiduel */
+  el.classList.add('open');
+  openWins[id] = { title: WIN_TITLES[id] || id, min: false };
+  front(id);
+  refreshTaskbar();
+
+  // Animer les skill bars à l'ouverture
+  if (id === 'w-skills') setTimeout(animSkills, 80);
+}
+
+function closeWin(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('open'); el.style.display = 'none'; }
+  delete openWins[id];
+  refreshTaskbar();
+}
+
+function minWin(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'none'; }
+  if (openWins[id]) openWins[id].min = true;
+  refreshTaskbar();
+}
+
+function front(id) {
+  zTop++;
+  const el = document.getElementById(id);
+  if (el) el.style.zIndex = zTop;
+  // Mettre le bouton taskbar en actif
+  document.querySelectorAll('.tb-win-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+}
+
+function tbClick(id) {
+  if (!openWins[id]) return;
+  if (openWins[id].min) {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'flex'; el.classList.add('open'); }
+    openWins[id].min = false;
+    front(id);
+  } else {
+    front(id);
+  }
+  refreshTaskbar();
+}
+
+function refreshTaskbar() {
+  const c = document.getElementById('taskbar-wins');
+  c.innerHTML = '';
+  Object.entries(openWins).forEach(([id, info]) => {
+    const b = document.createElement('button');
+    b.className = 'tb-win-btn';
+    b.dataset.id = id;
+    b.textContent = info.title;
+    b.onclick = () => tbClick(id);
+    c.appendChild(b);
+  });
+}
+
+/* ============================================================
+   DRAG — déplacer les fenêtres par la barre de titre
+   ============================================================ */
+function startDrag(e, id) {
+  if (e.button !== 0) return;
+  const el = document.getElementById(id);
+  front(id);
+  drag = {
+    id,
+    ox: e.clientX - (parseInt(el.style.left) || 0),
+    oy: e.clientY - (parseInt(el.style.top)  || 0),
+  };
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup',   endDrag);
+  e.preventDefault();
+}
+
+function onDrag(e) {
+  if (!drag) return;
+  const el = document.getElementById(drag.id);
+  const maxH = window.innerHeight - 44;
+  el.style.left = Math.max(0, e.clientX - drag.ox) + 'px';
+  el.style.top  = Math.max(0, Math.min(maxH, e.clientY - drag.oy)) + 'px';
+}
+
+function endDrag() {
+  drag = null;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup',   endDrag);
+}
+
+// Clic sur une fenêtre = passer au premier plan
+document.addEventListener('mousedown', e => {
+  const w = e.target.closest('.win');
+  if (w) front(w.id);
+});
+
+/* ============================================================
+   MENU DÉMARRER
+   ============================================================ */
+function toggleStartMenu() {
+  const m = document.getElementById('start-menu');
+  const b = document.getElementById('start-btn');
+  const open = m.classList.toggle('open');
+  b.classList.toggle('pressed', open);
+}
+
+function closeStartMenu() {
+  document.getElementById('start-menu').classList.remove('open');
+  document.getElementById('start-btn').classList.remove('pressed');
+}
+
+function openFromMenu(id) {
+  closeStartMenu();
+  openWin(id);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#start-menu') && !e.target.closest('#start-btn')) {
+    closeStartMenu();
+  }
+});
+
+/* ============================================================
+   SHUTDOWN & À PROPOS
+   ============================================================ */
+function doShutdown() {
+  closeStartMenu();
+  document.getElementById('shutdown').classList.add('open');
+}
+function closeShutdown() { document.getElementById('shutdown').classList.remove('open'); }
+
+function showAbout() {
+  closeStartMenu();
+  document.getElementById('about').classList.add('open');
+}
+function closeAbout() { document.getElementById('about').classList.remove('open'); }
+
+/* ============================================================
+   LIGHTBOX — agrandissement projets
+   ============================================================ */
+function openLightbox(title, caption, src) {
+  document.getElementById('lb-title').textContent = title;
+  document.getElementById('lb-caption').textContent = caption;
+  const img = document.getElementById('lb-img');
+  img.style.display = 'block';
+  img.src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+/* ============================================================
+   DÉFIS — résolution
+   ============================================================ */
+function resolveErr(n) {
+  // Afficher la solution
+  const sol = document.getElementById('es' + n);
+  if (sol) sol.classList.add('visible');
+  // Passer en vert
+  const title = document.getElementById('ed' + n + '-title');
+  if (title) { title.classList.add('resolved'); title.firstChild.textContent = ' ✓'; }
+  const ico = document.getElementById('ed' + n + '-ico');
+  if (ico) ico.textContent = '🟢';
+}
+
+function dismissErr(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+/* ============================================================
+   SKILL BARS — animation à l'ouverture
+   ============================================================ */
+function animSkills() {
+  document.querySelectorAll('.skill-fill').forEach(bar => {
+    bar.style.width = bar.dataset.w + '%';
+  });
+}
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeLightbox();
+    closeShutdown();
+    closeAbout();
+    closeStartMenu();
+  }
+});
+</script>
+
+</body>
+</html>

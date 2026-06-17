@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=1280">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>PaulOS 2031</title>
   <style>
     /* ================================================================
@@ -716,6 +716,57 @@
     #about.open { display: block; }
     #about-body { padding: 20px; text-align: center; font-size: 13px; line-height: 1.7; }
     #about-body .about-logo { font-size: 36px; font-weight: bold; color: #000080; margin-bottom: 8px; }
+
+    /* Message mobile boot */
+    #boot-mobile-msg { display: none; }
+
+    /* ================================================================
+       RESPONSIVE MOBILE
+       ================================================================ */
+    @media (max-width: 768px) {
+      #boot-mobile-msg {
+        display: block;
+        order: -1;
+        font-size: 36px;
+        font-weight: bold;
+        color: #fff;
+        letter-spacing: 3px;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      #boot-logo { font-size: 20px; letter-spacing: 2px; color: #888; margin-bottom: 2px; }
+      #boot-subtitle { font-size: 11px; letter-spacing: 1px; margin-bottom: 32px; }
+
+      /* Taskbar */
+      #taskbar { height: 48px; }
+      #desktop { bottom: 48px; }
+      #start-menu { bottom: 48px; }
+      #start-btn { height: 40px; font-size: 13px; }
+      .tb-win-btn { height: 36px; font-size: 10px; max-width: 110px; }
+      #taskbar-clock { font-size: 11px; padding: 3px 6px; }
+      #easter-egg { bottom: 52px; font-size: 9px; }
+
+      /* Fenêtres */
+      .win { min-width: 0; }
+
+      /* Boot bar */
+      #boot-bar-wrap { width: 280px; }
+
+      /* ID card - verticale */
+      .id-card { flex-direction: column; align-items: center; text-align: center; }
+      .id-photo { width: 80px; height: 100px; }
+      .id-name { font-size: 18px; }
+      .id-tagline { text-align: left; }
+
+      /* Skills - 1 colonne */
+      .skills-grid { grid-template-columns: 1fr; }
+
+      /* Proj - 2 colonnes */
+      .proj-grid { grid-template-columns: repeat(2, 1fr); }
+
+      /* Réduction des stat */
+      .stat-num { font-size: 22px; }
+    }
   </style>
 </head>
 <body>
@@ -732,6 +783,7 @@
   </div>
   <div id="boot-build">Version 2031.06.17 &nbsp;|&nbsp; Build DA Senior &nbsp;|&nbsp; Grinto Inc.</div>
   <div id="boot-skip" onclick="skipBoot()">[ Cliquer pour passer ]</div>
+  <div id="boot-mobile-msg">✌ C'est mieux sur PC</div>
 </div>
 
 <!-- ================================================================
@@ -1503,11 +1555,13 @@ function openWin(id) {
     return;
   }
 
-  // Taille 80% du bureau disponible, centrée
-  const W = Math.floor(window.innerWidth * 0.80);
-  const H = Math.floor((window.innerHeight - 42) * 0.80);
-  const L = Math.floor((window.innerWidth - W) / 2);
-  const T = Math.floor(((window.innerHeight - 42) - H) / 2);
+  // Taille selon écran
+  const mobile = window.innerWidth < 769;
+  const tbH = mobile ? 48 : 42;
+  const W = mobile ? window.innerWidth - 8        : Math.floor(window.innerWidth * 0.80);
+  const H = mobile ? window.innerHeight - tbH - 8 : Math.floor((window.innerHeight - tbH) * 0.80);
+  const L = mobile ? 4                            : Math.floor((window.innerWidth - W) / 2);
+  const T = mobile ? 4                            : Math.floor(((window.innerHeight - tbH) - H) / 2);
   el.style.width  = W + 'px';
   el.style.height = H + 'px';
   el.style.left   = L + 'px';
@@ -1578,38 +1632,62 @@ function refreshTaskbar() {
    DRAG — déplacer les fenêtres par la barre de titre
    ============================================================ */
 function startDrag(e, id) {
-  if (e.button !== 0) return;
+  const isTouch = e.touches != null;
+  if (!isTouch && e.button !== 0) return;
+  const px = isTouch ? e.touches[0].clientX : e.clientX;
+  const py = isTouch ? e.touches[0].clientY : e.clientY;
   const el = document.getElementById(id);
   front(id);
   drag = {
     id,
-    ox: e.clientX - (parseInt(el.style.left) || 0),
-    oy: e.clientY - (parseInt(el.style.top)  || 0),
+    ox: px - (parseInt(el.style.left) || 0),
+    oy: py - (parseInt(el.style.top)  || 0),
   };
-  document.addEventListener('mousemove', onDrag);
-  document.addEventListener('mouseup',   endDrag);
+  if (isTouch) {
+    document.addEventListener('touchmove', onTouchDrag, { passive: false });
+    document.addEventListener('touchend',  endDrag);
+  } else {
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup',   endDrag);
+  }
   e.preventDefault();
 }
 
 function onDrag(e) {
   if (!drag) return;
   const el = document.getElementById(drag.id);
-  const maxH = window.innerHeight - 44;
+  const maxH = window.innerHeight - 50;
   el.style.left = Math.max(0, e.clientX - drag.ox) + 'px';
   el.style.top  = Math.max(0, Math.min(maxH, e.clientY - drag.oy)) + 'px';
+}
+
+function onTouchDrag(e) {
+  if (!drag) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const el = document.getElementById(drag.id);
+  const maxH = window.innerHeight - 52;
+  el.style.left = Math.max(0, t.clientX - drag.ox) + 'px';
+  el.style.top  = Math.max(0, Math.min(maxH, t.clientY - drag.oy)) + 'px';
 }
 
 function endDrag() {
   drag = null;
   document.removeEventListener('mousemove', onDrag);
   document.removeEventListener('mouseup',   endDrag);
+  document.removeEventListener('touchmove', onTouchDrag);
+  document.removeEventListener('touchend',  endDrag);
 }
 
-// Clic sur une fenêtre = passer au premier plan
+// Clic/tap sur une fenêtre = passer au premier plan
 document.addEventListener('mousedown', e => {
   const w = e.target.closest('.win');
   if (w) front(w.id);
 });
+document.addEventListener('touchstart', e => {
+  const w = e.target.closest('.win');
+  if (w) front(w.id);
+}, { passive: true });
 
 /* ============================================================
    MENU DÉMARRER
@@ -1703,6 +1781,14 @@ document.addEventListener('keydown', e => {
     closeAbout();
     closeStartMenu();
   }
+});
+
+/* Touch drag sur les barres de titre */
+document.querySelectorAll('.win-title-bar').forEach(bar => {
+  bar.addEventListener('touchstart', e => {
+    const w = bar.closest('.win');
+    if (w) startDrag(e, w.id);
+  }, { passive: false });
 });
 </script>
 
